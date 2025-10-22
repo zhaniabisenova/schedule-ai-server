@@ -1,0 +1,54 @@
+/**
+ * package.json - сервер қолданбасының конфигурациясы
+ * 
+ * Бұл файлда:
+ * - Сервер туралы негізгі ақпарат
+ * - Backend пакеттері (Express, Prisma, JWT, т.б.)
+ * - База деректері командалары
+ * - Дамыту пакеттері
+ * 
+ * Қысқасы: бұл сервердің "қажеттілер тізімі"
+ */
+
+{
+  "name": "schedule-ai-server", // Сервер аты
+  "version": "1.0.0", // Нұсқасы
+  "description": "Backend server for Schedule AI application", // Сипаттамасы
+  "main": "server.js", // Негізгі файл
+  "type": "module", // ES модульдерін қолдану
+  "scripts": {
+    "start": "node src/server.js", // Продакшн режимінде іске қосу
+    "dev": "nodemon src/server.js", // Дамыту режимінде іске қосу (авто-рестарт)
+    "test": "jest", // Тесттерді іске қосу
+    "prisma:generate": "prisma generate", // Prisma клиентін генерациялау
+    "prisma:migrate": "prisma migrate dev", // База деректері миграцияларын іске қосу
+    "prisma:seed": "node prisma/seed.js", // Тест деректерін толтыру
+    "prisma:studio": "prisma studio" // Prisma Studio-ны ашу (база деректерін қарау)
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0", // Prisma ORM клиенті
+    "express": "^4.18.2", // Express.js веб фреймворк
+    "cors": "^2.8.5", // CORS қауіпсіздік
+    "dotenv": "^16.3.1", // .env файлынан айнымалыларды оқу
+    "bcryptjs": "^2.4.3", // Парольдерді хештеу
+    "jsonwebtoken": "^9.0.2", // JWT токендер
+    "express-validator": "^7.0.1", // Деректерді валидациялау
+    "helmet": "^7.1.0", // Қауіпсіздік заголовкалары
+    "express-rate-limit": "^7.1.5", // Сұрауларды шектеу
+    "multer": "^1.4.5-lts.1", // Файл жүктеу
+    "cookie-parser": "^1.4.6" // Cookie-лерді парсингтеу
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1", // Дамыту режимінде авто-рестарт
+    "jest": "^29.6.2", // Тест фреймворк
+    "prisma": "^5.7.0" // Prisma CLI
+  },
+  "keywords": [
+    "schedule", // Кесте
+    "ai", // Жасанды интеллект
+    "university", // Университет
+    "education" // Білім беру
+  ],
+  "author": "Schedule AI Team", // Автор
+  "license": "MIT" // Лицензия
+}

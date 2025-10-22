@@ -1,0 +1,700 @@
+// Расширенная Prisma схема для Schedule AI
+// Система автоматизированного составления расписания
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// СУЩЕСТВУЮЩИЕ МОДЕЛИ (User, Profiles, etc.)
+// ============================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studentProfile    StudentProfile?
+  teacherProfile    TeacherProfile?
+  dispatcherProfile DispatcherProfile?
+  adminProfile      AdminProfile?
+
+  createdSchedules     Schedule[]            @relation("CreatedSchedules")
+  teachingLoads        TeachingLoad[]
+  optimizationHistories OptimizationHistory[]
+  createdConstraints   Constraint[]
+  
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  DISPATCHER
+  ADMIN
+}
+
+model StudentProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  group     String
+  faculty   String
+  course    Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("student_profiles")
+}
+
+model TeacherProfile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  department String
+  subjects   String   // JSON строка массива предметов
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("teacher_profiles")
+}
+
+model DispatcherProfile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  department String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("dispatcher_profiles")
+}
+
+model AdminProfile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  department String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("admin_profiles")
+}
+
+// ============================================
+// СТРУКТУРА УНИВЕРСИТЕТА
+// ============================================
+
+model Faculty {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique
+  nameKz      String
+  nameRu      String
+  nameEn      String?
+  description String?     @db.Text
+  isActive    Boolean     @default(true)
+  
+  departments Department[]
+  schedules   Schedule[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([code])
+  @@map("faculties")
+}
+
+model Department {
+  id                Int      @id @default(autoincrement())
+  facultyId         Int
+  faculty           Faculty  @relation(fields: [facultyId], references: [id])
+  
+  code              String   @unique
+  nameKz            String
+  nameRu            String
+  nameEn            String?
+  isActive          Boolean  @default(true)
+  
+  programs          EducationalProgram[]
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([facultyId])
+  @@index([code])
+  @@map("departments")
+}
+
+model EducationalProgram {
+  id             Int          @id @default(autoincrement())
+  departmentId   Int
+  department     Department   @relation(fields: [departmentId], references: [id])
+  
+  code           String       @unique
+  nameKz         String
+  nameRu         String
+  nameEn         String?
+  degreeLevel    DegreeLevel
+  durationYears  Int
+  credits        Int
+  isActive       Boolean      @default(true)
+  
+  groups         Group[]
+  curricula      Curriculum[]
+  
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([departmentId])
+  @@index([code])
+  @@map("educational_programs")
+}
+
+enum DegreeLevel {
+  BACHELOR
+  MASTER
+  PHD
+}
+
+model Group {
+  id                   Int                  @id @default(autoincrement())
+  programId            Int
+  program              EducationalProgram   @relation(fields: [programId], references: [id])
+  
+  code                 String               @unique // ИТ-21-1к
+  enrollmentYear       Int                  // 2021
+  courseNumber         Int                  // вычисляется автоматически
+  language             Language
+  studentsCount        Int
+  shift                Shift
+  isActive             Boolean              @default(true)
+  
+  // Настройки подгрупп
+  lectureSubgroups     Int                  @default(1)
+  practicalSubgroups   Int                  @default(1)
+  labSubgroups         Int                  @default(1)
+  
+  subgroups            Subgroup[]
+  teachingLoads        TeachingLoad[]
+  lessons              Lesson[]
+  
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([programId])
+  @@index([code])
+  @@index([enrollmentYear])
+  @@map("groups")
+}
+
+enum Language {
+  KAZAKH
+  RUSSIAN
+  ENGLISH
+}
+
+enum Shift {
+  MORNING
+  AFTERNOON
+  FLEXIBLE
+}
+
+model Subgroup {
+  id             Int            @id @default(autoincrement())
+  groupId        Int
+  group          Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  number         Int            // 1, 2, 3
+  type           SubgroupType
+  studentsCount  Int
+  
+  lessons        Lesson[]
+  
+  createdAt      DateTime       @default(now())
+
+  @@index([groupId])
+  @@map("subgroups")
+}
+
+enum SubgroupType {
+  LECTURE
+  PRACTICAL
+  LAB
+}
+
+// ============================================
+// УЧЕБНЫЙ ПРОЦЕСС
+// ============================================
+
+model Semester {
+  id           Int        @id @default(autoincrement())
+  academicYear String     // 2024-2025
+  number       Int        // 1 или 2
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean    @default(false)
+  
+  teachingLoads   TeachingLoad[]
+  schedules       Schedule[]
+  penaltySettings PenaltySettings[]
+  constraints     Constraint[]
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([academicYear, number])
+  @@map("semesters")
+}
+
+model Discipline {
+  id          Int          @id @default(autoincrement())
+  code        String       @unique
+  nameKz      String
+  nameRu      String
+  nameEn      String?
+  credits     Int
+  category    DisciplineCategory
+  description String?      @db.Text
+  
+  curricula   Curriculum[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([code])
+  @@map("disciplines")
+}
+
+enum DisciplineCategory {
+  GENERAL
+  CORE
+  ELECTIVE
+}
+
+model Curriculum {
+  id              Int                  @id @default(autoincrement())
+  programId       Int
+  program         EducationalProgram   @relation(fields: [programId], references: [id])
+  disciplineId    Int
+  discipline      Discipline           @relation(fields: [disciplineId], references: [id])
+  
+  semester        Int                  // 1-8
+  credits         Int
+  hoursTotal      Int
+  hoursLecture    Int
+  hoursPractical  Int
+  hoursLab        Int
+  assessmentType  AssessmentType
+  isElective      Boolean              @default(false)
+  
+  teachingLoads   TeachingLoad[]
+  
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([programId])
+  @@index([disciplineId])
+  @@map("curricula")
+}
+
+enum AssessmentType {
+  EXAM
+  CREDIT
+  DIFFERENTIATED_CREDIT
+}
+
+model TeachingLoad {
+  id             Int              @id @default(autoincrement())
+  semesterId     Int
+  semester       Semester         @relation(fields: [semesterId], references: [id])
+  curriculumId   Int
+  curriculum     Curriculum       @relation(fields: [curriculumId], references: [id])
+  teacherId      Int
+  teacher        User             @relation(fields: [teacherId], references: [id])
+  groupId        Int
+  group          Group            @relation(fields: [groupId], references: [id])
+  
+  subgroupType   SubgroupType?    // null для лекций
+  hoursLecture   Int
+  hoursPractical Int
+  hoursLab       Int
+  status         LoadStatus       @default(DRAFT)
+  notes          String?          @db.Text
+  
+  lessons        Lesson[]
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([semesterId])
+  @@index([teacherId])
+  @@index([groupId])
+  @@map("teaching_loads")
+}
+
+enum LoadStatus {
+  DRAFT
+  APPROVED
+  SCHEDULED
+}
+
+// ============================================
+// РЕСУРСЫ
+// ============================================
+
+model Building {
+  id          Int         @id @default(autoincrement())
+  code        String      @unique
+  name        String
+  address     String
+  floorsCount Int
+  
+  classrooms  Classroom[]
+  lessons     Lesson[]
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([code])
+  @@map("buildings")
+}
+
+model Classroom {
+  id         Int            @id @default(autoincrement())
+  buildingId Int
+  building   Building       @relation(fields: [buildingId], references: [id])
+  
+  number     String         // 201, A-305
+  capacity   Int
+  type       ClassroomType
+  equipment  String?        @db.Text // JSON
+  isActive   Boolean        @default(true)
+  notes      String?        @db.Text
+  
+  lessons           Lesson[]      @relation("PrimaryClassroom")
+  secondaryLessons  Lesson[]      @relation("SecondaryClassroom")
+  
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([buildingId])
+  @@index([type])
+  @@map("classrooms")
+}
+
+enum ClassroomType {
+  LECTURE_HALL
+  COMPUTER_LAB
+  GYM
+  STANDARD
+}
+
+model TimeSlot {
+  id         Int      @id @default(autoincrement())
+  shift      Shift
+  pairNumber Int      // 1-6
+  startTime  String   // 08:30
+  endTime    String   // 10:00
+  
+  lessons    Lesson[]
+  
+  createdAt  DateTime @default(now())
+
+  @@index([shift, pairNumber])
+  @@map("time_slots")
+}
+
+// ============================================
+// РАСПИСАНИЕ (расширенное)
+// ============================================
+
+model Schedule {
+  id                Int           @id @default(autoincrement())
+  name              String
+  description       String?       @db.Text
+  
+  semesterId        Int
+  semester          Semester      @relation(fields: [semesterId], references: [id])
+  facultyId         Int?
+  faculty           Faculty?      @relation(fields: [facultyId], references: [id])
+  
+  academicYear      String
+  semesterNumber    Int
+  
+  isActive          Boolean       @default(false)
+  isPublished       Boolean       @default(false)
+  generatedBy       GenerationType
+  optimizationScore Float?
+  version           Int           @default(1)
+  parentScheduleId  Int?
+  parentSchedule    Schedule?     @relation("ScheduleVersions", fields: [parentScheduleId], references: [id], onDelete: SetNull)
+  
+  createdById       Int
+  createdBy         User          @relation("CreatedSchedules", fields: [createdById], references: [id])
+  
+  lessons             Lesson[]
+  childSchedules      Schedule[]            @relation("ScheduleVersions")
+  optimizationHistory OptimizationHistory[]
+  conflicts           Conflict[]
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([semesterId])
+  @@index([facultyId])
+  @@index([isActive])
+  @@map("schedules")
+}
+
+enum GenerationType {
+  MANUAL
+  ALGORITHM
+  AI_ASSISTED
+}
+
+model Lesson {
+  id               Int           @id @default(autoincrement())
+  scheduleId       Int
+  schedule         Schedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  teachingLoadId   Int
+  teachingLoad     TeachingLoad  @relation(fields: [teachingLoadId], references: [id])
+  
+  groupId          Int
+  group            Group         @relation(fields: [groupId], references: [id])
+  subgroupId       Int?
+  subgroup         Subgroup?     @relation(fields: [subgroupId], references: [id])
+  
+  buildingId       Int
+  building         Building      @relation(fields: [buildingId], references: [id])
+  classroomId      Int
+  classroom        Classroom     @relation("PrimaryClassroom", fields: [classroomId], references: [id])
+  
+  dayOfWeek        Int           // 1-7
+  timeSlotId       Int
+  timeSlot         TimeSlot      @relation(fields: [timeSlotId], references: [id])
+  
+  subject          String
+  teacher          String
+  lessonType       LessonType    @default(LECTURE)
+  
+  isDoubleLesson       Boolean   @default(false)
+  secondClassroomId    Int?
+  secondClassroom      Classroom? @relation("SecondaryClassroom", fields: [secondClassroomId], references: [id])
+  
+  isStreamLesson       Boolean   @default(false)
+  streamGroups         String?   @db.Text // JSON массив ID групп
+  
+  status               LessonStatus @default(PLANNED)
+  cancellationReason   String?   @db.Text
+  
+  conflictsAsLesson1   Conflict[] @relation("Lesson1Conflicts")
+  conflictsAsLesson2   Conflict[] @relation("Lesson2Conflicts")
+  
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([scheduleId])
+  @@index([groupId])
+  @@index([dayOfWeek])
+  @@index([teachingLoadId])
+  @@index([scheduleId, dayOfWeek, timeSlotId])
+  @@map("lessons")
+}
+
+enum LessonType {
+  LECTURE
+  PRACTICE
+  LAB
+  SEMINAR
+}
+
+enum LessonStatus {
+  PLANNED
+  CONFIRMED
+  CANCELLED
+  RESCHEDULED
+}
+
+// ============================================
+// ОПТИМИЗАЦИЯ
+// ============================================
+
+model PenaltySettings {
+  id                Int       @id @default(autoincrement())
+  semesterId        Int
+  semester          Semester  @relation(fields: [semesterId], references: [id])
+  
+  name              String
+  isDefault         Boolean   @default(false)
+  penalties         String    @db.Text // JSON с весами штрафов
+  
+  createdBy         Int
+  creator           User      @relation(fields: [createdBy], references: [id])
+  
+  optimizationHistory OptimizationHistory[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([semesterId])
+  @@map("penalty_settings")
+}
+
+model OptimizationHistory {
+  id                 Int             @id @default(autoincrement())
+  scheduleId         Int
+  schedule           Schedule        @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  penaltySettingsId  Int
+  penaltySettings    PenaltySettings @relation(fields: [penaltySettingsId], references: [id])
+  
+  algorithm          String
+  initialScore       Float
+  finalScore         Float
+  iterationsCount    Int
+  executionTime      Int             // секунды
+  improvements       String?         @db.Text // JSON
+  status             OptimizationStatus
+  
+  createdBy          Int
+  creator            User            @relation(fields: [createdBy], references: [id])
+  
+  createdAt          DateTime        @default(now())
+
+  @@index([scheduleId])
+  @@map("optimization_history")
+}
+
+enum OptimizationStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Constraint {
+  id          Int              @id @default(autoincrement())
+  semesterId  Int
+  semester    Semester         @relation(fields: [semesterId], references: [id])
+  
+  type        ConstraintType
+  entityType  EntityType
+  entityId    Int
+  
+  dayOfWeek   Int?
+  timeSlotId  Int?
+  startDate   DateTime?
+  endDate     DateTime?
+  reason      String           @db.Text
+  priority    Int              @default(5) // 1-10
+  isActive    Boolean          @default(true)
+  
+  createdBy   Int
+  creator     User             @relation(fields: [createdBy], references: [id])
+  
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([semesterId])
+  @@index([entityType, entityId])
+  @@map("constraints")
+}
+
+enum ConstraintType {
+  TEACHER_UNAVAILABLE
+  CLASSROOM_UNAVAILABLE
+  GROUP_PREFERENCE
+}
+
+enum EntityType {
+  TEACHER
+  CLASSROOM
+  GROUP
+}
+
+model Conflict {
+  id               Int              @id @default(autoincrement())
+  scheduleId       Int
+  schedule         Schedule         @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  lesson1Id        Int
+  lesson1          Lesson           @relation("Lesson1Conflicts", fields: [lesson1Id], references: [id], onDelete: Cascade)
+  lesson2Id        Int?
+  lesson2          Lesson?          @relation("Lesson2Conflicts", fields: [lesson2Id], references: [id], onDelete: Cascade)
+  
+  type             ConflictType
+  severity         ConflictSeverity
+  description      String           @db.Text
+  penaltyValue     Float
+  isResolved       Boolean          @default(false)
+  resolutionNote   String?          @db.Text
+  
+  detectedAt       DateTime         @default(now())
+  resolvedAt       DateTime?
+
+  @@index([scheduleId])
+  @@index([isResolved])
+  @@map("conflicts")
+}
+
+enum ConflictType {
+  TEACHER_CONFLICT
+  ROOM_CONFLICT
+  GROUP_CONFLICT
+  SOFT_CONSTRAINT
+}
+
+enum ConflictSeverity {
+  CRITICAL
+  WARNING
+  INFO
+}
+
+// ============================================
+// УВЕДОМЛЕНИЯ (существующая модель)
+// ============================================
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  
+  title     String
+  message   String           @db.Text
+  type      NotificationType @default(INFO)
+  
+  isRead    Boolean          @default(false)
+  
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+}
+

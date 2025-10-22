@@ -1,0 +1,189 @@
+// Prisma схема для Schedule AI
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Модель пользователя
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Связи с профилями в зависимости от роли
+  studentProfile    StudentProfile?
+  teacherProfile    TeacherProfile?
+  dispatcherProfile DispatcherProfile?
+  adminProfile      AdminProfile?
+
+  // Связи с другими сущностями
+  createdSchedules Schedule[] @relation("CreatedSchedules")
+  
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// Enum для ролей
+enum Role {
+  STUDENT
+  TEACHER
+  DISPATCHER
+  ADMIN
+}
+
+// Профиль студента
+model StudentProfile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  group     String
+  faculty   String
+  course    Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("student_profiles")
+}
+
+// Профиль преподавателя
+model TeacherProfile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  department String
+  subjects   String   // JSON строка массива предметов
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("teacher_profiles")
+}
+
+// Профиль диспетчера
+model DispatcherProfile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  department String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("dispatcher_profiles")
+}
+
+// Профиль администратора
+model AdminProfile {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  department String
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("admin_profiles")
+}
+
+// Модель расписания
+model Schedule {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  
+  academicYear String
+  semester     Int
+  
+  isActive    Boolean  @default(false)
+  isPublished Boolean  @default(false)
+  
+  createdById Int
+  createdBy   User     @relation("CreatedSchedules", fields: [createdById], references: [id])
+  
+  lessons     Lesson[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([academicYear, semester])
+  @@index([isActive])
+  @@map("schedules")
+}
+
+// Модель занятия
+model Lesson {
+  id         Int      @id @default(autoincrement())
+  scheduleId Int
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  subject    String
+  teacher    String
+  group      String
+  room       String
+  
+  dayOfWeek  Int // 1-7 (понедельник - воскресенье)
+  startTime  String
+  endTime    String
+  
+  lessonType LessonType @default(LECTURE)
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([scheduleId])
+  @@index([group])
+  @@index([dayOfWeek])
+  @@map("lessons")
+}
+
+// Enum для типов занятий
+enum LessonType {
+  LECTURE
+  PRACTICE
+  LAB
+  SEMINAR
+}
+
+// Модель уведомлений
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  
+  isRead    Boolean          @default(false)
+  
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// Enum для типов уведомлений
+enum NotificationType {
+  INFO
+  WARNING
+  ERROR
+  SUCCESS
+}
+
