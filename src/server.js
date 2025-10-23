@@ -30,6 +30,28 @@ import authRoutes from './routes/auth.js' // Кіру/шығу маршрутт�
 import userRoutes from './routes/users.js' // Пайдаланушылар маршруттары
 import scheduleRoutes from './routes/schedule.js' // Кесте маршруттары
 
+// Справочники (уровень 1)
+import semesterRoutes from './routes/semesters.js' // Семестры
+import facultyRoutes from './routes/faculties.js' // Факультеты
+import buildingRoutes from './routes/buildings.js' // Корпуса
+import disciplineRoutes from './routes/disciplines.js' // Дисциплины
+import timeSlotRoutes from './routes/timeSlots.js' // Временные слоты
+
+// Справочники (уровень 2)
+import departmentRoutes from './routes/departments.js' // Кафедры
+import classroomRoutes from './routes/classrooms.js' // Аудитории
+
+// Справочники (уровень 3-5)
+import programRoutes from './routes/programs.js' // Образовательные программы
+import groupRoutes from './routes/groups.js' // Группы
+import curriculumRoutes from './routes/curriculum.js' // Учебные планы
+import teachingLoadRoutes from './routes/teachingLoads.js' // Педагогические нагрузки
+
+// Дополнительные
+import penaltyRoutes from './routes/penalties.js' // Настройки штрафов
+import constraintRoutes from './routes/constraints.js' // Ограничения
+import importRoutes from './routes/import.js' // Импорт данных
+
 // Айнымалыларды жүктеу (.env файлынан)
 dotenv.config()
 
@@ -41,21 +63,34 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" } // CORS ресурстарына рұқсат беру
 }))
 
+// CORS конфигурациясы - CORS-ты rate limiting-тен бұрын орнату керек
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    process.env.FRONTEND_URL
+  ].filter(Boolean), // null мәндерді алып тастау
+  credentials: true, // Cookie-лерді жіберуге рұқсат беру
+  optionsSuccessStatus: 200, // Браузерлер үшін
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}
+app.use(cors(corsOptions))
+
 // Rate limiting - тым көп сұрауларды шектеу
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
-  max: 100, // максимум 100 сұрау терезеден
-  message: 'Тым көп сұраныс жіберілді, кейінірек қайталаңыз'
+  max: 1000, // максимум 1000 сұрау терезеден (100-ден көп)
+  message: 'Тым көп сұраныс жіберілді, кейінірек қайталаңыз',
+  standardHeaders: true, // Rate limit ақпаратын `RateLimit-*` заголовкаларда қайтару
+  legacyHeaders: false, // `X-RateLimit-*` заголовкаларын өшіру
+  skip: (req) => {
+    // Health check-ті rate limiting-тен өткізіп жіберу
+    return req.path === '/api/health'
+  }
 })
 app.use('/api/', limiter) // API маршруттарына ғана қолдану
-
-// CORS конфигурациясы
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Фронтенд URL-і
-  credentials: true, // Cookie-лерді жіберуге рұқсат беру
-  optionsSuccessStatus: 200 // Браузерлер үшін
-}
-app.use(cors(corsOptions))
 
 // Body parser middleware - JSON және URL-encoded деректерді өңдеу
 app.use(express.json({ limit: '10mb' })) // JSON деректердің максималды өлшемі
@@ -73,6 +108,28 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes) // Кіру/шығу маршруттары
 app.use('/api/users', userRoutes) // Пайдаланушылар маршруттары
 app.use('/api/schedules', scheduleRoutes) // Кесте маршруттары
+
+// Справочники (уровень 1)
+app.use('/api/semesters', semesterRoutes) // Семестры
+app.use('/api/faculties', facultyRoutes) // Факультеты
+app.use('/api/buildings', buildingRoutes) // Корпуса
+app.use('/api/disciplines', disciplineRoutes) // Дисциплины
+app.use('/api/timeslots', timeSlotRoutes) // Временные слоты
+
+// Справочники (уровень 2)
+app.use('/api/departments', departmentRoutes) // Кафедры
+app.use('/api/classrooms', classroomRoutes) // Аудитории
+
+// Справочники (уровень 3-5)
+app.use('/api/programs', programRoutes) // Образовательные программы
+app.use('/api/groups', groupRoutes) // Группы
+app.use('/api/curriculum', curriculumRoutes) // Учебные планы
+app.use('/api/teaching-loads', teachingLoadRoutes) // Педагогические нагрузки
+
+// Дополнительные
+app.use('/api/penalties', penaltyRoutes) // Настройки штрафов
+app.use('/api/constraints', constraintRoutes) // Ограничения
+app.use('/api/import', importRoutes) // Импорт данных
 
 // Health check endpoint - сервердің жұмыс істеп тұрғанын тексеру
 app.get('/api/health', (req, res) => {
