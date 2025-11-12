@@ -11,7 +11,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "db:clear": "node scripts/clearAllDataExceptUsers.js",
+    "db:backup": "mysqldump -u root -p schedule_ai > backups/backup_$(date +%Y%m%d_%H%M%S).sql"
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",

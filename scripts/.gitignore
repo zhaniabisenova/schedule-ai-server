@@ -1,0 +1,4 @@
+# Ignore test outputs
+test_output.txt
+*.log
+
