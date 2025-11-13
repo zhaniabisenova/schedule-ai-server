@@ -30,7 +30,7 @@ router.post('/', authenticate, authorize('DISPATCHER', 'ADMIN'), [
   body('nameKz').notEmpty().withMessage('Қазақша аты міндетті'),
   body('nameRu').notEmpty().withMessage('Орысша аты міндетті'),
   body('credits').isInt({ min: 1 }).withMessage('Кредит саны оң сан болуы керек'),
-  body('category').isIn(['GENERAL', 'CORE', 'ELECTIVE']).withMessage('Жарамсыз категория')
+  body('category').isIn(['OK', 'KV', 'UNIVERSITY', 'PRK', 'GA', 'GENERAL', 'CORE', 'ELECTIVE']).withMessage('Жарамсыз категория')
 ], validate, createDiscipline)
 
 // @route   PUT /api/disciplines/:id
