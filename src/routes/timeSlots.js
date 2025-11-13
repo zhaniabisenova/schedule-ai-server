@@ -33,7 +33,7 @@ router.get('/:id', authenticate, getTimeSlotById)
 // @access  Private (Dispatcher, Admin)
 router.post('/', authenticate, authorize('DISPATCHER', 'ADMIN'), [
   body('shift').isIn(['MORNING', 'AFTERNOON', 'FLEXIBLE']).withMessage('Жарамсыз ауысым'),
-  body('pairNumber').isInt({ min: 1, max: 6 }).withMessage('Жұп нөмірі 1-6 арасында болуы керек'),
+  body('pairNumber').isInt({ min: 1, max: 15 }).withMessage('Жұп нөмірі 1-15 арасында болуы керек'),
   body('startTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Жарамды уақыт форматы (HH:MM)'),
   body('endTime').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Жарамды уақыт форматы (HH:MM)')
 ], validate, createTimeSlot)

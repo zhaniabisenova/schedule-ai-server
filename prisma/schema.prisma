@@ -420,7 +420,7 @@ enum ClassroomType {
 model TimeSlot {
   id         Int      @id @default(autoincrement())
   shift      Shift
-  pairNumber Int      // 1-6
+  pairNumber Int      // 1-15 (расширено для поддержки расписания с 8:30 до 18:40)
   startTime  String   // 08:30
   endTime    String   // 10:00
   
