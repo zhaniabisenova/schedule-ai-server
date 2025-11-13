@@ -60,7 +60,7 @@ export const getClassroomsByType = async (req, res) => {
 
     const classrooms = await prisma.classroom.findMany({
       where: {
-        type: type.toUpperCase(),
+        type: type, // Ищем по точному совпадению без преобразования
         isActive: true
       },
       include: {
@@ -154,7 +154,7 @@ export const createClassroom = async (req, res) => {
         buildingId: parseInt(buildingId),
         number,
         capacity: parseInt(capacity),
-        type: type.toUpperCase(),
+        type: type, // Сохраняем оригинальный текст без преобразования
         equipment: equipment ? JSON.stringify(equipment) : null,
         isActive: isActive !== undefined ? isActive : true,
         notes
@@ -234,7 +234,7 @@ export const updateClassroom = async (req, res) => {
         buildingId: buildingId ? parseInt(buildingId) : classroom.buildingId,
         number: number || classroom.number,
         capacity: capacity ? parseInt(capacity) : classroom.capacity,
-        type: type ? type.toUpperCase() : classroom.type,
+        type: type || classroom.type, // Сохраняем оригинальный текст без преобразования
         equipment: equipment ? JSON.stringify(equipment) : classroom.equipment,
         isActive: isActive !== undefined ? isActive : classroom.isActive,
         notes: notes !== undefined ? notes : classroom.notes

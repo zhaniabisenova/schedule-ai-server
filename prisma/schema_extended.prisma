@@ -391,7 +391,7 @@ model Classroom {
   
   number     String         // 201, A-305
   capacity   Int
-  type       ClassroomType
+  type       String         // Тип аудитории (текстовое поле для гибкости)
   equipment  String?        @db.Text // JSON
   isActive   Boolean        @default(true)
   notes      String?        @db.Text
@@ -407,6 +407,7 @@ model Classroom {
   @@map("classrooms")
 }
 
+// Старый enum оставлен для совместимости, но больше не используется
 enum ClassroomType {
   LECTURE_HALL
   COMPUTER_LAB

@@ -41,7 +41,7 @@ router.post('/', authenticate, authorize('DISPATCHER', 'ADMIN'), [
   body('buildingId').isInt().withMessage('Ғимарат ID міндетті'),
   body('number').notEmpty().withMessage('Нөмір міндетті'),
   body('capacity').isInt({ min: 1 }).withMessage('Сыйымдылық оң сан болуы керек'),
-  body('type').isIn(['LECTURE_HALL', 'COMPUTER_LAB', 'GYM', 'STANDARD']).withMessage('Жарамсыз түр')
+  body('type').notEmpty().withMessage('Түрі міндетті')
 ], validate, createClassroom)
 
 // @route   PUT /api/classrooms/:id
